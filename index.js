@@ -69,6 +69,39 @@ app.post('/generate', async (req, res) => {
   processVideo(video_id, prompts, audio_url, callback_url).catch(console.error);
 });
 
+app.get('/reauth', async (req, res) => {
+  try {
+    const response = await axios.post(`${HIGGSFIELD_AUTH}/authorize`, {});
+    const { device_code, verification_uri, expires_in } = response.data;
+    res.json({
+      message: 'Visit the URL below and log in, then call /reauth/complete with the device_code',
+      verification_uri,
+      device_code,
+      expires_in_seconds: expires_in
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/reauth/complete', async (req, res) => {
+  const { device_code } = req.body;
+  if (!device_code) return res.status(400).json({ error: 'Missing device_code' });
+  try {
+    const response = await axios.post(`${HIGGSFIELD_AUTH}/token`, { device_code });
+    const { access_token, refresh_token, expires_in } = response.data;
+    accessToken = access_token;
+    tokenExpiry = Date.now() + (expires_in * 1000);
+    res.json({
+      message: 'Success! Copy the refresh_token below and update HIGGSFIELD_REFRESH_TOKEN in Railway.',
+      refresh_token,
+      expires_in_days: 7
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3000;
