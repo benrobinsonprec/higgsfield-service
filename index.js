@@ -84,8 +84,8 @@ app.get('/reauth', async (req, res) => {
   }
 });
 
-app.post('/reauth/complete', async (req, res) => {
-  const { device_code } = req.body;
+app.get('/reauth/complete', async (req, res) => {
+  const { device_code } = req.query;
   if (!device_code) return res.status(400).json({ error: 'Missing device_code' });
   try {
     const response = await axios.post(`${HIGGSFIELD_AUTH}/token`, { device_code });
