@@ -8,16 +8,31 @@ const HIGGSFIELD_AUTH = 'https://fnf-device-auth.higgsfield.ai';
 
 let accessToken = null;
 let tokenExpiry = 0;
+let currentRefreshToken = process.env.HIGGSFIELD_REFRESH_TOKEN;
 
 async function getAccessToken() {
   if (accessToken && Date.now() < tokenExpiry - 60000) return accessToken;
   const res = await axios.post(`${HIGGSFIELD_AUTH}/token`, {
-    refresh_token: process.env.HIGGSFIELD_REFRESH_TOKEN
+    refresh_token: currentRefreshToken
   });
   accessToken = res.data.access_token;
   tokenExpiry = Date.now() + (res.data.expires_in * 1000);
+  if (res.data.refresh_token) {
+    currentRefreshToken = res.data.refresh_token;
+    console.log('Refresh token updated in memory');
+  }
   return accessToken;
 }
+
+// Proactively refresh every 5 days to keep refresh token alive
+setInterval(async () => {
+  try {
+    await getAccessToken();
+    console.log('Proactive token refresh complete');
+  } catch (err) {
+    console.error('Proactive refresh failed:', err.message);
+  }
+}, 5 * 24 * 60 * 60 * 1000);
 
 async function createJob(token, prompt) {
   const res = await axios.post(`${HIGGSFIELD_API}/agents/jobs`, {
